@@ -11,6 +11,7 @@ load_dotenv()
 TOKEN: Final[str] = os.getenv("DISCORD_TOKEN")
 
 intents: Intents = Intents.default()
+intents.members = True
 intents.message_content = True
 bot = commands.Bot(command_prefix='!', intents=intents)
 
@@ -55,7 +56,9 @@ async def initialize_streaks():
     logger.info("Initializing streaks data...")
     for guild in bot.guilds:
         logger.info(f"Processing guild: {guild.name}")
-        for member in guild.members:
+        async for member in guild.fetch_members(limit=None):
+            if member.bot:
+                continue
             user_id = str(member.id)
             if user_id not in streaks:
                 streaks[user_id] = {"streak": 0}
