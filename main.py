@@ -3,18 +3,13 @@ import logging
 from typing import Final
 import os
 from dotenv import load_dotenv
-from discord.ext import commands
-from discord import Intents, Member, Message
+from discord import Member, Message
 from responses import get_response
-from streaks import load_streaks, save_streaks, process_streak
+from streaks import initialize_streaks, load_streaks, save_streaks, process_streak
+from bot import bot
 
 load_dotenv()
 TOKEN: Final[str] = os.getenv("DISCORD_TOKEN")
-
-intents: Intents = Intents.default()
-intents.members = True
-intents.message_content = True
-bot = commands.Bot(command_prefix='!', intents=intents)
 
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 logger = logging.getLogger(__name__)
@@ -84,28 +79,6 @@ async def on_message(message: Message) -> None:
         await send_message(message, user_message)
 
     await bot.process_commands(message)
-
-async def initialize_streaks():
-    logger.info("Initializing streaks data...")
-    streaks_data = load_streaks()
-
-    for guild in bot.guilds:
-        logger.info(f"Processing guild: {guild.name}")
-        async for member in guild.fetch_members(limit=None):
-            if member.bot:
-                continue
-            user_id = str(member.id)
-            if user_id not in streaks_data:
-                streaks_data[user_id] = {
-                    "username": member.name,
-                    "current_streak": 0,
-                    "longest_streak": 0,
-                    "last_join_date": None
-                }
-                logger.info(f"Added {member.name} to streaks data with initial streak of 0.")
-
-    save_streaks(streaks_data)
-    logger.info("Streaks data initialization completed.")
 
 async def display_streak(ctx, member, streaks_data):
     user_id = str(member.id)

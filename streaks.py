@@ -2,10 +2,33 @@ import json
 import logging
 import os
 from datetime import datetime, timedelta
+from bot import bot
 
 logger = logging.getLogger(__name__)
 
 STREAKS_FILE = "streaks.json"
+
+async def initialize_streaks():
+    logger.info("Initializing streaks data...")
+    streaks_data = load_streaks()
+
+    for guild in bot.guilds:
+        logger.info(f"Processing guild: {guild.name}")
+        async for member in guild.fetch_members(limit=None):
+            if member.bot:
+                continue
+            user_id = str(member.id)
+            if user_id not in streaks_data:
+                streaks_data[user_id] = {
+                    "username": member.name,
+                    "current_streak": 0,
+                    "longest_streak": 0,
+                    "last_join_date": None
+                }
+                logger.info(f"Added {member.name} to streaks data with initial streak of 0.")
+
+    save_streaks(streaks_data)
+    logger.info("Streaks data initialization completed.")
 
 def load_streaks():
     if not os.path.exists(STREAKS_FILE):
