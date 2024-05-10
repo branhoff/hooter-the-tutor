@@ -127,8 +127,10 @@ async def streak(ctx, member: Member = None):
         current_streak = streaks_data[user_id]["current_streak"]
         longest_streak = streaks_data[user_id]["longest_streak"]
         username = streaks_data[user_id]["username"]
-        await ctx.send(f"{username}'s current streak is: {current_streak} days!")
-        await ctx.send(f"{username}'s longest streak is: {longest_streak} days!")
+        message = f"{username}'s streaks:\n" \
+                  f"Current streak: {current_streak} days\n" \
+                  f"Longest streak: {longest_streak} days"
+        await ctx.send(message)
         logger.info(f"{ctx.author.name} checked {username}'s streaks - Current: {current_streak}, Longest: {longest_streak}")
     else:
         await ctx.send(f"{member.mention} hasn't started a streak yet.")
