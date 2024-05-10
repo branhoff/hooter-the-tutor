@@ -1,5 +1,6 @@
 ## General ignore
 **/temp*
+streaks.json
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
