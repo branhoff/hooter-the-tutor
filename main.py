@@ -61,16 +61,27 @@ async def initialize_streaks():
                 continue
             user_id = str(member.id)
             if user_id not in streaks:
-                streaks[user_id] = {"streak": 0}
+                streaks[user_id] = {
+                    "username": member.name,
+                    "current_streak": 0,
+                    "longest_streak": 0
+                }
                 logger.info(f"Added {member.name} to streaks data with initial streak of 0.")
     save_streaks()
     logger.info("Streaks data initialization completed.")
 
 @bot.event
 async def on_voice_state_update(member, before, after):
+    if member.bot:
+        return
+
     user_id = str(member.id)
     if user_id not in streaks:
-        streaks[user_id] = {"streak": 0}
+        streaks[user_id] = {
+            "username": member.name,
+            "current_streak": 0,
+            "longest_streak": 0
+        }
 
     if after.channel and after.channel.id == STUDY_CHANNEL_ID:
         join_time = datetime.now()
@@ -85,13 +96,15 @@ async def on_voice_state_update(member, before, after):
                 if "last_join_date" in streaks[user_id]:
                     last_join_date = streaks[user_id]["last_join_date"]
                     if today - last_join_date == timedelta(days=1):
-                        streaks[user_id]["streak"] += 1
-                        logger.info(f"{member.name}'s streak increased to {streaks[user_id]['streak']} days.")
+                        streaks[user_id]["current_streak"] += 1
+                        if streaks[user_id]["current_streak"] > streaks[user_id]["longest_streak"]:
+                            streaks[user_id]["longest_streak"] = streaks[user_id]["current_streak"]
+                        logger.info(f"{member.name}'s streak increased to {streaks[user_id]['current_streak']} days.")
                     elif today - last_join_date > timedelta(days=1):
-                        streaks[user_id]["streak"] = 1
+                        streaks[user_id]["current_streak"] = 1
                         logger.info(f"{member.name}'s streak reset to 1 day.")
                 else:
-                    streaks[user_id]["streak"] = 1
+                    streaks[user_id]["current_streak"] = 1
                     logger.info(f"{member.name} started a new streak of 1 day.")
                 streaks[user_id]["last_join_date"] = today
                 save_streaks()
@@ -101,7 +114,6 @@ async def on_voice_state_update(member, before, after):
         else:
             logger.info(f"{member.name} left the study channel but had no active join time.")
 
-
 @bot.command(name="streak")
 async def streak(ctx, member: Member = None):
     if member is None:
@@ -109,19 +121,18 @@ async def streak(ctx, member: Member = None):
 
     user_id = str(member.id)
 
-    # Load the latest streaks data from the file
     streaks_data = load_streaks()
 
     if user_id in streaks_data:
-        streak_count = streaks_data[user_id]["streak"]
-        await ctx.send(
-            f"{member.mention}'s current streak is: {streak_count} days!")
-        logger.info(
-            f"{ctx.author.name} checked {member.name}'s streak of {streak_count} days.")
+        current_streak = streaks_data[user_id]["current_streak"]
+        longest_streak = streaks_data[user_id]["longest_streak"]
+        username = streaks_data[user_id]["username"]
+        await ctx.send(f"{username}'s current streak is: {current_streak} days!")
+        await ctx.send(f"{username}'s longest streak is: {longest_streak} days!")
+        logger.info(f"{ctx.author.name} checked {username}'s streaks - Current: {current_streak}, Longest: {longest_streak}")
     else:
         await ctx.send(f"{member.mention} hasn't started a streak yet.")
-        logger.info(
-            f"{ctx.author.name} checked {member.name}'s streak, but they haven't started yet.")
+        logger.info(f"{ctx.author.name} checked {member.name}'s streak, but they haven't started yet.")
 
 async def send_message(message: Message, user_message: str) -> None:
     if not user_message:
