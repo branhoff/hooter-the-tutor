@@ -29,12 +29,12 @@ async def on_member_join(member):
 @bot.event
 async def on_voice_state_update(member, before, after):
     if member.bot:
-        return  # Ignore voice state updates for bots, including the bot itself
+        return
 
     await process_streak(member, before, after, STUDY_CHANNEL_ID, MINIMUM_MINUTES)
 
 @bot.command(name="streak")
-async def streak(ctx, member: Member = None):
+async def streak(ctx, member: Member = None) -> None:
     if member is None:
         member = ctx.author
 
@@ -59,7 +59,7 @@ async def on_ready() -> None:
     await initialize_streaks()
 
 @bot.event
-async def on_disconnect():
+async def on_disconnect() -> None:
     save_streaks(load_streaks())
     print("Bot disconnected. Streaks data saved.")
 
