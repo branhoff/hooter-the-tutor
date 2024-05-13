@@ -8,6 +8,16 @@ logger = logging.getLogger(__name__)
 
 STREAKS_FILE = "streaks.json"
 
+async def list_all_streaks(channel):
+    streaks_data = load_streaks()
+    streaks_message = "**Daily Streak Update:**\n"
+    for user_id, data in streaks_data.items():
+        username = data["username"]
+        current_streak = data["current_streak"]
+        streaks_message += f"{username}: {current_streak} days\n"
+
+    await channel.send(streaks_message)
+
 async def initialize_streaks():
     logger.info("Initializing streaks data...")
     streaks_data = load_streaks()
@@ -78,7 +88,8 @@ async def process_streak(member, before, after, study_channel_id, minimum_minute
     if is_joining_study_channel(after, study_channel_id):
         handle_join(user_id, member.name)
     elif is_leaving_study_channel(before, study_channel_id):
-        handle_leave(user_id, member.name, minimum_minutes)
+        channel = before.channel
+        await handle_leave(user_id, member.name, minimum_minutes, member, channel)
 
 def is_joining_study_channel(after, study_channel_id):
     return after.channel and after.channel.id == study_channel_id
@@ -104,7 +115,7 @@ def handle_join(user_id, username):
     logger.info(f"{username} joined the study channel.")
     save_streaks(streaks_data)
 
-def handle_leave(user_id, username, minimum_minutes):
+async def handle_leave(user_id, username, minimum_minutes, member, channel):
     streaks_data = load_streaks()
     logger.info(f'Handling leave for {username}')
     user_join_time = streaks_data[user_id]["join_time"]
@@ -112,19 +123,32 @@ def handle_leave(user_id, username, minimum_minutes):
         logger.info(f"{username} has join time.")
         duration = datetime.now() - user_join_time
         if duration >= timedelta(minutes=minimum_minutes):
+            previous_streak = streaks_data[user_id]["current_streak"]
             streaks_data = update_streak(streaks_data, user_id, username)
+            current_streak = streaks_data[user_id]["current_streak"]
+            if current_streak > previous_streak:
+                await channel.send(f"Congratulations, {member.mention}! Your streak has increased to {current_streak} days.")
+            else:
+                await channel.send(f"Great job, {member.mention}! You maintained your streak of {current_streak} days.")
         else:
             logger.info(f"{username} left the study channel before the minimum duration.")
+            await channel.send(f"Hey {member.mention}, you left the study channel before the minimum {minimum_minutes} minutes. Keep at it next time to maintain your streak!")
     else:
         logger.info(f"{username} left the study channel but had no active join time.")
 
     streaks_data[user_id]["join_time"] = None
     save_streaks(streaks_data)
 
+
 def update_streak(streaks_data, user_id, username):
     today = datetime.now().date()
     if streaks_data[user_id]["last_join_date"]:
-        last_join_date = datetime.fromisoformat(streaks_data[user_id]["last_join_date"]).date()
+        last_join_date_str = streaks_data[user_id]["last_join_date"]
+        if isinstance(last_join_date_str, str):
+            last_join_date = datetime.fromisoformat(last_join_date_str).date()
+        else:
+            last_join_date = last_join_date_str.date()
+
         if today - last_join_date == timedelta(days=1):
             streaks_data = increment_streak(streaks_data, user_id, username)
         else:

@@ -1,11 +1,16 @@
 import json
 import logging
+from datetime import time
 from typing import Final
 import os
+
+import pytz
+from discord.ext import tasks
 from dotenv import load_dotenv
 from discord import Member, Message
-from responses import get_response
-from streaks import initialize_streaks, load_streaks, save_streaks, process_streak
+from responses import get_response, get_hooter_explanation
+from streaks import initialize_streaks, load_streaks, save_streaks, \
+    process_streak, list_all_streaks
 from bot import bot
 
 load_dotenv()
@@ -15,7 +20,8 @@ logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(
 logger = logging.getLogger(__name__)
 
 STUDY_CHANNEL_ID = 1236433017250250806
-MINIMUM_MINUTES = 1
+GENERAL_CHANNEL_ID = 1236433017250250805
+MINIMUM_MINUTES = 25
 
 @bot.event
 async def on_member_join(member):
@@ -23,8 +29,23 @@ async def on_member_join(member):
     welcome_channel = guild.system_channel
 
     if welcome_channel:
-        purpose = "Welcome to the server! The purpose of this group is to build accountability for side and study projects."
-        await welcome_channel.send(f"Welcome {member.mention}! {purpose}")
+        welcome_message = f"Whoo-hoo! Welcome, {member.display_name}! 🎉 I’m Hooter the Tutor, your guide to staying accountable. We’ve got daily sessions at 9 PM PST but remember, you can hop in anytime that works for you to maintain your streak!"
+        # Sending the initial welcome message
+        await welcome_channel.send(welcome_message)
+        # Detailed explanation as a follow-up message
+        await welcome_channel.send(get_hooter_explanation())
+
+@bot.command(name="reintroduce")
+async def reintroduce(ctx, member: Member = None):
+    """Command to reintroduce the system. If a member is mentioned, it addresses them specifically."""
+    if member:
+      message = f"Hey {member.display_name}, let me reintroduce you to how we keep things engaging around here!"
+    else:
+      message = "Looks like someone needs a refresher on how our awesome system works!"
+
+    explanation = get_hooter_explanation()
+    await ctx.send(f"{message}\n{explanation}")
+
 
 @bot.event
 async def on_voice_state_update(member, before, after):
@@ -43,7 +64,7 @@ async def streak(ctx, member: Member = None) -> None:
 
 async def send_message(message: Message, user_message: str) -> None:
     if not user_message:
-        print("Message was empty because intents were not enabled properly")
+        logger.debug("Message was empty because intents were not enabled properly")
     if is_private := user_message[0] == '?':
         user_message = user_message[1:]
 
@@ -51,17 +72,28 @@ async def send_message(message: Message, user_message: str) -> None:
         response: str = get_response(user_message)
         await message.author.send(response) if is_private else await message.channel.send(response)
     except Exception as e:
-        print(e)
+        logging.debug(e)
+
+@tasks.loop(time=time(hour=21, minute=0, tzinfo=pytz.timezone('US/Pacific')))
+async def daily_streak_update():
+    channel = bot.get_channel(1236433017250250805)
+    await list_all_streaks(channel)
+
+@daily_streak_update.before_loop
+async def before_daily_streak_update():
+    await bot.wait_until_ready()
+    logger.info("Daily streak update task is ready!")
 
 @bot.event
 async def on_ready() -> None:
     print(f"{bot.user} is now running")
     await initialize_streaks()
+    daily_streak_update.start()
 
 @bot.event
 async def on_disconnect() -> None:
     save_streaks(load_streaks())
-    print("Bot disconnected. Streaks data saved.")
+    logging.info("Bot disconnected. Streaks data saved.")
 
 @bot.event
 async def on_message(message: Message) -> None:
@@ -72,7 +104,7 @@ async def on_message(message: Message) -> None:
     user_message: str = message.content
     channel: str = str(message.channel)
 
-    print(f"[{channel}] {username}: {user_message}")
+    logger.info(f"[{channel}] {username}: {user_message}")
 
     if bot.user.mentioned_in(message):
         user_message = user_message.replace(f'<@!{bot.user.id}>', '').strip()
