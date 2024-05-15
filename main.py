@@ -1,9 +1,7 @@
-import json
 import logging
 from datetime import time
 from typing import Final
 import os
-
 import pytz
 from discord.ext import tasks
 from dotenv import load_dotenv
@@ -81,6 +79,7 @@ async def daily_streak_update():
 
 @daily_streak_update.before_loop
 async def before_daily_streak_update():
+    # sent at 9:53 instead of 9:00
     await bot.wait_until_ready()
     logger.info("Daily streak update task is ready!")
 

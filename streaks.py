@@ -142,22 +142,27 @@ async def handle_leave(user_id, username, minimum_minutes, member, channel):
 
 def update_streak(streaks_data, user_id, username):
     today = datetime.now().date()
-    if streaks_data[user_id]["last_join_date"]:
-        last_join_date_str = streaks_data[user_id]["last_join_date"]
-        if isinstance(last_join_date_str, str):
-            last_join_date = datetime.fromisoformat(last_join_date_str).date()
-        else:
-            last_join_date = last_join_date_str.date()
+    last_join_date_str = streaks_data[user_id]["last_join_date"]
 
-        if today - last_join_date == timedelta(days=1):
+    if last_join_date_str:
+        last_join_date = parse_date_string(last_join_date_str)
+        days_since_last_join = (today - last_join_date).days
+
+        if days_since_last_join == 1:
             streaks_data = increment_streak(streaks_data, user_id, username)
-        else:
+        elif days_since_last_join > 1:
             streaks_data = reset_streak(streaks_data, user_id, username)
     else:
-        start_new_streak(streaks_data, user_id, username)
+        streaks_data = start_new_streak(streaks_data, user_id, username)
+
     streaks_data[user_id]["last_join_date"] = today.isoformat()
     return streaks_data
 
+def parse_date_string(date_string):
+    if isinstance(date_string, str):
+        return datetime.fromisoformat(date_string).date()
+    else:
+        return date_string.date()
 def increment_streak(streaks_data, user_id, username):
     streaks_data[user_id]["current_streak"] += 1
     streaks_data[user_id]["longest_streak"] = max(streaks_data[user_id]["longest_streak"], streaks_data[user_id]["current_streak"])
@@ -173,3 +178,4 @@ def start_new_streak(streaks_data, user_id, username):
     streaks_data[user_id]["current_streak"] = 1
     streaks_data[user_id]["longest_streak"] = 1
     logger.info(f"{username} started a new streak of 1 day.")
+    return streaks_data
