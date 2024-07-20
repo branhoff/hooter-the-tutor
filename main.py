@@ -11,6 +11,8 @@ from streaks import initialize_streaks, load_streaks, save_streaks, \
     process_streak, list_all_streaks
 from bot import bot
 
+from openAI import OpenAIChatGPTModel
+
 load_dotenv()
 TOKEN: Final[str] = os.getenv("DISCORD_TOKEN")
 
@@ -129,6 +131,7 @@ async def display_streak(ctx, member, streaks_data):
 
 def main():
     bot.run(token=TOKEN)
+
 
 if __name__ == '__main__':
     main()
