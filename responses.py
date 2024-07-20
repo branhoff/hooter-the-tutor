@@ -11,7 +11,7 @@ load_dotenv()
 def get_response(user_input: str) -> str:
   lowered = user_input.lower()
 
-  if lowered == '' "how does this accountability work again" in lowered or "explain the accountability system" in lowered:
+  if "how does this accountability work again" in lowered or "explain the accountability system" in lowered:
     return get_hooter_explanation()
   else:
     return ask_LLM(lowered)
