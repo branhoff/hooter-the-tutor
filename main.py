@@ -11,6 +11,8 @@ from responses import get_hooter_explanation
 from streaks import initialize_streaks, load_streaks, save_streaks, \
     process_streak, list_all_streaks
 from bot import bot
+from leetcode import fetch_leetcode_profile
+import discord
 
 load_dotenv()
 TOKEN: Final[str] = os.getenv("DISCORD_TOKEN")
@@ -130,6 +132,20 @@ async def display_streak(ctx, member, streaks_data):
 
 client = "openAI"
 model = choose_model(client)
+
+@bot.command(name='leetcode')
+async def leetcode(ctx, username: str):
+    data = fetch_leetcode_profile(username)
+    if data:
+        embed = discord.Embed(title=f"LeetCode Profile: {username}", color=discord.Color.blue())
+        embed.add_field(name="Username", value=username, inline=False)
+        embed.add_field(name="Easy Solved", value=f"{data['easySolved']} / {data['totalEasy']}", inline=True)
+        embed.add_field(name="Medium Solved", value=f"{data['mediumSolved']} / {data['totalMedium']}", inline=True)
+        embed.add_field(name="Hard Solved", value=f"{data['hardSolved']} / {data['totalHard']}", inline=True)
+        await ctx.send(embed=embed)
+    else:
+        await ctx.send(f"Could not fetch data for {username}.")
+
 def main():
     bot.run(token=TOKEN)
 
