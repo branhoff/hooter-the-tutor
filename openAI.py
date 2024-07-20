@@ -1,6 +1,7 @@
 import openai
 import os
 from dotenv import load_dotenv
+from responses import get_hooter_explanation
 
 # Load environment variables from .env file
 load_dotenv()
@@ -17,6 +18,9 @@ class OpenAIChatGPTModel:
         openai.api_key = OPENAI_API_KEY
 
     def generate_response(self, user_message: str) -> str:
+        lowered = user_message.lower()
+        if "how does this accountability work again" in lowered or "explain the accountability system" in lowered:
+            return get_hooter_explanation()
         try:
             response = openai.ChatCompletion.create(
                 model=self.model_name,

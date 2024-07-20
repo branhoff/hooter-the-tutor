@@ -7,7 +7,7 @@ from discord.ext import tasks
 from dotenv import load_dotenv
 from discord import Member, Message
 from choose_model import choose_model
-from octoAI import get_hooter_explanation
+from responses import get_hooter_explanation
 from streaks import initialize_streaks, load_streaks, save_streaks, \
     process_streak, list_all_streaks
 from bot import bot
@@ -128,7 +128,7 @@ async def display_streak(ctx, member, streaks_data):
         await ctx.send(f"{member.mention} hasn't started a streak yet.")
         logger.info(f"{ctx.author.name} checked {member.name}'s streak, but they haven't started yet.")
 
-client = "octoAI"
+client = "openAI"
 model = choose_model(client)
 def main():
     bot.run(token=TOKEN)
