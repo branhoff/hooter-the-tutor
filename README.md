@@ -19,11 +19,17 @@ Hooter the Tutor is a Discord bot designed to promote accountability and track s
 - Create a `.env` file in the project root and add your Discord bot token:
    ```
    DISCORD_TOKEN=your_discord_bot_token_here
+   OPENAI_API_KEY=your_openAI_key_here
+   OCTOAI_API_TOKEN=your_octoAI_key_here
    ```
 - Configure the channel IDs in `main.py`:
    ```python
    STUDY_CHANNEL_ID = your_study_channel_id
    GENERAL_CHANNEL_ID = your_general_channel_id
+   ```
+- Choose your model in main.py
+   ```python
+   client = your_chosen_model
    ```
 - Run the bot:
    ```

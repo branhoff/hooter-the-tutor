@@ -1,18 +1,3 @@
-
-def get_response(user_input: str) -> str:
-  lowered = user_input.lower()
-
-  if lowered == '':
-    return "Well you're awfully silent..."
-  elif "hello" in lowered:
-    return "Hello there!"
-  elif "how are you" in lowered:
-    return "Good thanks!"
-  elif "bye" in lowered:
-    return "See you!"
-  elif "how does this accountability work again" in lowered or "explain the accountability system" in lowered:
-    return get_hooter_explanation()
-
 def get_hooter_explanation():
   """Returns the detailed explanation of the system."""
   return (

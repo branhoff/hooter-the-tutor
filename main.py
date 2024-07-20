@@ -6,7 +6,8 @@ import pytz
 from discord.ext import tasks
 from dotenv import load_dotenv
 from discord import Member, Message
-from responses import get_response, get_hooter_explanation
+from choose_model import choose_model
+from responses import get_hooter_explanation
 from streaks import initialize_streaks, load_streaks, save_streaks, \
     process_streak, list_all_streaks
 from bot import bot
@@ -67,7 +68,7 @@ async def send_message(message: Message, user_message: str) -> None:
         user_message = user_message[1:]
 
     try:
-        response: str = get_response(user_message)
+        response: str = model.generate_response(user_message)
         await message.author.send(response) if is_private else await message.channel.send(response)
     except Exception as e:
         logging.debug(e)
@@ -127,8 +128,11 @@ async def display_streak(ctx, member, streaks_data):
         await ctx.send(f"{member.mention} hasn't started a streak yet.")
         logger.info(f"{ctx.author.name} checked {member.name}'s streak, but they haven't started yet.")
 
+client = "openAI"
+model = choose_model(client)
 def main():
     bot.run(token=TOKEN)
+
 
 if __name__ == '__main__':
     main()
