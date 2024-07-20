@@ -5,7 +5,6 @@ from langchain_community.llms.octoai_endpoint import OctoAIEndpoint
 from langchain.prompts import ChatPromptTemplate
 from langchain_core.runnables import RunnablePassthrough
 from langchain_core.output_parsers import StrOutputParser
-
 load_dotenv()
 class OctoAI:
   def generate_response(self, user_message: str) -> str:
@@ -15,7 +14,7 @@ class OctoAI:
       return get_hooter_explanation()
     else:
       return ask_LLM(lowered)
-
+    
 def ask_LLM(lowered):
     # API token
     OCTOAI_API_TOKEN = os.environ.get("OCTOAI_API_TOKEN")
@@ -54,8 +53,6 @@ def ask_LLM(lowered):
 
     except Exception as e:
         return f"An error occurred: {e}"
-
-
 
 def get_hooter_explanation():
   """Returns the detailed explanation of the system."""
