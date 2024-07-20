@@ -7,14 +7,14 @@ from langchain_core.runnables import RunnablePassthrough
 from langchain_core.output_parsers import StrOutputParser
 
 load_dotenv()
+class OctoAI:
+  def generate_response(self, user_message: str) -> str:
+    lowered = user_message.lower()
 
-def get_response(user_input: str) -> str:
-  lowered = user_input.lower()
-
-  if "how does this accountability work again" in lowered or "explain the accountability system" in lowered:
-    return get_hooter_explanation()
-  else:
-    return ask_LLM(lowered)
+    if "how does this accountability work again" in lowered or "explain the accountability system" in lowered:
+      return get_hooter_explanation()
+    else:
+      return ask_LLM(lowered)
 
 def ask_LLM(lowered):
     # API token
@@ -24,12 +24,11 @@ def ask_LLM(lowered):
 
     # Initialize llm
     llm = OctoAIEndpoint(
-        model="meta-llama-3-8b-instruct",
-        max_tokens=512,  
+        model="mixtral-8x22b-instruct",
+        max_tokens=5000,  
         presence_penalty=0,
         temperature=0.5,
-        top_p=1,
-        stop=["\n","Question:"],
+        top_p=1
     )
 
     # prompt

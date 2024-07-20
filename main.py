@@ -6,12 +6,13 @@ import pytz
 from discord.ext import tasks
 from dotenv import load_dotenv
 from discord import Member, Message
-from responses import get_response, get_hooter_explanation
+from responses import OctoAI, get_hooter_explanation
 from streaks import initialize_streaks, load_streaks, save_streaks, \
     process_streak, list_all_streaks
 from bot import bot
 
 from openAI import OpenAIChatGPTModel
+from client import Client
 
 load_dotenv()
 TOKEN: Final[str] = os.getenv("DISCORD_TOKEN")
@@ -69,7 +70,7 @@ async def send_message(message: Message, user_message: str) -> None:
         user_message = user_message[1:]
 
     try:
-        response: str = get_response(user_message)
+        response: str = model.generate_response(user_message)
         await message.author.send(response) if is_private else await message.channel.send(response)
     except Exception as e:
         logging.debug(e)
@@ -128,7 +129,21 @@ async def display_streak(ctx, member, streaks_data):
     else:
         await ctx.send(f"{member.mention} hasn't started a streak yet.")
         logger.info(f"{ctx.author.name} checked {member.name}'s streak, but they haven't started yet.")
+def chooseModel(client: str):
+    models = {
+        "openAI": OpenAIChatGPTModel,
+        "octoAI": OctoAI
+    }
 
+    model_class = models.get(client)
+    if model_class:
+        return model_class()
+    else:
+        raise ValueError(f"Model for client '{client}' is not defined.")
+
+
+client = "octoAI"
+model = chooseModel(client)
 def main():
     bot.run(token=TOKEN)
 
