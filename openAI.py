@@ -3,7 +3,10 @@ import os
 from dotenv import load_dotenv
 from responses import get_hooter_explanation
 
-# Load environment variables from .env file
+import logging
+
+logger = logging.getLogger(__name__)
+
 load_dotenv()
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
 
@@ -33,6 +36,7 @@ class OpenAIChatGPTModel:
                 temperature=self.temperature,
                 top_p=self.top_p
             )
+            logger.debug(response)
             return response.choices[0].message['content']
         except Exception as e:
             print(f"Error generating response from OpenAIChatGPTModel: {e}")
