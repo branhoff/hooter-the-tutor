@@ -1,8 +1,8 @@
 #!/bin/bash
 
 # Check Python version
-if ! python -c 'import sys; assert sys.version_info >= (3,11)' > /dev/null; then
-    echo "Python version should be >= 3.11"
+if ! python -c 'import sys; assert sys.version_info >= (3,10) and sys.version_info < (3,12)' > /dev/null; then
+    echo "Python version should be >= 3.10 and < 3.12"
     exit 1
 fi
 
