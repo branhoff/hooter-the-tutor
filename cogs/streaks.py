@@ -6,7 +6,7 @@ from bot import core
 
 logger = logging.getLogger(__name__)
 
-STREAKS_FILE = "../streaks.json"
+STREAKS_FILE = "streaks.json"
 
 async def list_all_streaks(channel):
     streaks_data = load_streaks()
@@ -50,6 +50,7 @@ def load_streaks():
         logger.info(f"Loading streaks data from file: {STREAKS_FILE}")
     with open(STREAKS_FILE, 'r') as file:
         loaded_data = json.load(file)
+        logger.debug(f"Raw loaded data: {loaded_data}")
         deserialized_streaks = {
             user_id: {
                 "username": data["username"],
@@ -60,6 +61,7 @@ def load_streaks():
             }
             for user_id, data in loaded_data.items()
         }
+        logger.debug(f"Deserialized streaks: {deserialized_streaks}")
         return deserialized_streaks
 
 def save_streaks(streaks_data):

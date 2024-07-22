@@ -24,7 +24,6 @@ async def async_main():
     await bot.start(TOKEN)
 
 def main():
-
     keep_alive_thread = Thread(target=bot.run, args=(TOKEN,))
     keep_alive_thread.start()
     port = int(os.environ.get('PORT', 8080))

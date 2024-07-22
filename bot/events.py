@@ -37,7 +37,7 @@ async def on_voice_state_update(member, before, after):
 
 @bot.event
 async def on_ready() -> None:
-    print(f"{bot.user} is now running")
+    logger.info(f"{bot.user} is now running")
     await initialize_streaks()
 
 
@@ -76,6 +76,3 @@ async def send_message(message: Message, user_message: str) -> None:
         await message.author.send(response) if is_private else await message.channel.send(response)
     except Exception as e:
         logging.debug(e)
-
-
-
