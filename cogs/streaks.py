@@ -2,11 +2,11 @@ import json
 import logging
 import os
 from datetime import datetime, timedelta
-from bot import bot
+from bot import core
 
 logger = logging.getLogger(__name__)
 
-STREAKS_FILE = "streaks.json"
+STREAKS_FILE = "../streaks.json"
 
 async def list_all_streaks(channel):
     streaks_data = load_streaks()
@@ -22,7 +22,7 @@ async def initialize_streaks():
     logger.info("Initializing streaks data...")
     streaks_data = load_streaks()
 
-    for guild in bot.guilds:
+    for guild in core.bot.guilds:
         logger.info(f"Processing guild: {guild.name}")
         async for member in guild.fetch_members(limit=None):
             if member.bot:
