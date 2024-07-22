@@ -14,6 +14,9 @@ from bot import bot
 from leetcode import fetch_leetcode_profile
 import discord
 
+from flask import Flask
+from threading import Thread
+
 load_dotenv()
 TOKEN: Final[str] = os.getenv("DISCORD_TOKEN")
 
@@ -146,9 +149,22 @@ async def leetcode(ctx, username: str):
     else:
         await ctx.send(f"Could not fetch data for {username}.")
 
+app = Flask('')
+
+@app.route('/')
+def home():
+    return "Hooter the Tutor is running!"
+
+
+port = int(os.environ.get('PORT', 8080))
+
+def keep_alive():
+    app.run(host='0.0.0.0', port=port)
 
 def main():
-    bot.run(token=TOKEN)
+    bot_thread = Thread(target=bot.run, args=(TOKEN,))
+    bot_thread.start()
+    keep_alive()
 
 
 if __name__ == '__main__':
