@@ -6,9 +6,9 @@ https://cloud.google.com/artifact-registry
 https://cloud.google.com/run?hl=en
 
 
-Build the image from the project root
+Build/update the image from the project root
 ```shell
-docker build . -t hooter-the-tutor-image
+docker build -t us-west1-docker.pkg.dev/light-sunlight-430106-u1/hooter-the-tutor/hooter-the-tutor:latest .
 ```
 
 Tag the image with google cloud artifact registry url
