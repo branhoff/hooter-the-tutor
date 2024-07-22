@@ -28,7 +28,7 @@ class OpenAIChatGPTModel:
             response = openai.ChatCompletion.create(
                 model=self.model_name,
                 messages=[
-                    {"role": "system", "content": "You are a helpful assistant."},
+                    {"role": "system", "content": "You are a helpful assistant named Hooter the Tutor (<@1237247053180960830>) that specializes in helping people accomplish their study goals."},
                     {"role": "user", "content": user_message}
                 ],
                 max_tokens=self.max_tokens,
