@@ -1,5 +1,5 @@
-from openAI import OpenAIChatGPTModel
-from octoAI import OctoAI
+from models.openAI import OpenAIChatGPTModel
+from models.octoAI import OctoAI
 
 def choose_model(client: str):
     models = {

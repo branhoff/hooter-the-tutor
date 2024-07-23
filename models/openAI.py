@@ -1,9 +1,10 @@
+import logging
 import openai
 import os
+
 from dotenv import load_dotenv
 from responses import get_hooter_explanation
 
-import logging
 
 logger = logging.getLogger(__name__)
 

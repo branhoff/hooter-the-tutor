@@ -2,7 +2,7 @@ import json
 import logging
 import os
 from datetime import datetime, timedelta
-from bot import bot
+from bot import core
 
 logger = logging.getLogger(__name__)
 
@@ -22,7 +22,7 @@ async def initialize_streaks():
     logger.info("Initializing streaks data...")
     streaks_data = load_streaks()
 
-    for guild in bot.guilds:
+    for guild in core.bot.guilds:
         logger.info(f"Processing guild: {guild.name}")
         async for member in guild.fetch_members(limit=None):
             if member.bot:
@@ -50,6 +50,7 @@ def load_streaks():
         logger.info(f"Loading streaks data from file: {STREAKS_FILE}")
     with open(STREAKS_FILE, 'r') as file:
         loaded_data = json.load(file)
+        logger.debug(f"Raw loaded data: {loaded_data}")
         deserialized_streaks = {
             user_id: {
                 "username": data["username"],
@@ -60,6 +61,7 @@ def load_streaks():
             }
             for user_id, data in loaded_data.items()
         }
+        logger.debug(f"Deserialized streaks: {deserialized_streaks}")
         return deserialized_streaks
 
 def save_streaks(streaks_data):
