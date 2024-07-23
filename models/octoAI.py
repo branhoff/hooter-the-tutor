@@ -1,11 +1,11 @@
 from dotenv import load_dotenv
 import os
-from langchain_community.embeddings import OctoAIEmbeddings
 from langchain_community.llms.octoai_endpoint import OctoAIEndpoint
 from langchain.prompts import ChatPromptTemplate
-from langchain_core.runnables import RunnablePassthrough
 from langchain_core.output_parsers import StrOutputParser
 from responses import get_hooter_explanation
+
+
 load_dotenv()
 class OctoAI:
   def generate_response(self, user_message: str) -> str:

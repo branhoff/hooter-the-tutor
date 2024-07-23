@@ -11,10 +11,36 @@ Hooter the Tutor is a Discord bot designed to promote accountability and track s
 - **User Commands**: Allows users to check their current and longest streaks.
 - **Reintroduction Command**: Provides a refresher on how the accountability system works.
 
+## Application Structure
+
+The application is organized into several key directories and files:
+
+- `bot/`: Contains core bot functionality
+  - `commands.py`: Defines bot commands
+  - `core.py`: Core bot setup and configuration
+  - `events.py`: Handles Discord events
+  - `tasks.py`: Defines scheduled tasks
+- `cogs/`: Contains modular extensions for the bot
+  - `leetcode.py`: LeetCode-related functionality
+  - `streaks.py`: Streak tracking functionality
+- `models/`: Contains different AI model integrations
+  - `octoAI.py`: OctoAI model integration
+  - `openAI.py`: OpenAI model integration
+- `scripts/`: Contains utility scripts
+  - `build_and_run.sh`: Script for building and running the bot
+  - `install_dependencies.sh`: Script for installing dependencies
+- `main.py`: The entry point of the application
+- `choose_model.py`: Handles model selection
+- `responses.py`: Defines bot responses
+- `Dockerfile`: For containerizing the application
+- `requirements.txt`: Lists Python dependencies
+
+This structure allows for modular development and easy expansion of the bot's functionality.
+
 ## Setup
 - Install Python version 3.11 (pyenv recommended)
 - Clone the repository
-- Run the `install_dependencies.sh` script to install requirements and setup a virtual environment (`.venv`)
+- Run the `./scripts/install_dependencies.sh` script to install requirements and setup a virtual environment (`.venv`)
 - Activate your `.venv`
 - Create a `.env` file in the project root and add your Discord bot token:
    ```
