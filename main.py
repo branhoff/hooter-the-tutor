@@ -6,7 +6,6 @@ from bot.core import bot, TOKEN
 from flask import Flask
 from threading import Thread
 
-from bot.setup import setup_bot
 
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 logger = logging.getLogger(__name__)
