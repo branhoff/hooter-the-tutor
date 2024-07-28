@@ -1,6 +1,8 @@
 import logging
+import discord
 from discord.ext import commands
 from discord import Member
+from cogs.leetcode import fetch_leetcode_profile
 from cogs.streaks import load_streaks
 from responses import get_hooter_explanation
 
@@ -45,3 +47,15 @@ class CommandsCog(commands.Cog):
         else:
             await ctx.send(f"{member.mention} hasn't started a streak yet.")
 
+    @commands.command(name='leetcode')
+    async def leetcode(self, ctx, username: str):
+        data = fetch_leetcode_profile(username)
+        if data:
+            embed = discord.Embed(title=f"LeetCode Profile: {username}", color=discord.Color.blue())
+            embed.add_field(name="Username", value=username, inline=False)
+            embed.add_field(name="Easy Solved", value=f"{data['easySolved']} / {data['totalEasy']}", inline=True)
+            embed.add_field(name="Medium Solved", value=f"{data['mediumSolved']} / {data['totalMedium']}", inline=True)
+            embed.add_field(name="Hard Solved", value=f"{data['hardSolved']} / {data['totalHard']}", inline=True)
+            await ctx.send(embed=embed)
+        else:
+            await ctx.send(f"Could not fetch data for {username}.")
