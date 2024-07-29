@@ -61,3 +61,30 @@ This structure allows for modular development and easy expansion of the bot's fu
    ```
    python main.py
    ```
+
+## Running Unit Tests
+
+This project uses pytest for unit testing. To run the unit tests, follow these steps:
+
+1. Navigate to the root directory of the project in your terminal.
+2. Make sure you've run the `./scripts/install_dependencies.sh` script which will install testing requirements from `requirements/dev.text`:
+  ```
+  pip install pytest pytest-asyncio
+  ```
+3. Run the following command to execute all unit tests:
+  ```
+  pytest tests/unit
+  ```
+This command will discover and run all test files in the `tests/unit` directory.
+4. To run a specific test file, you can specify the file path:
+  ```
+  pytest tests/unit/test_leetcode.py
+  ```
+5. To run a specific test function, you can use the following syntax:
+  ```
+  pytest tests/unit/test_leetcode.py::test_leetcode_command_success
+  ```
+6. For more verbose output, you can use the `-v` flag:
+  ```
+  pytest -v tests/unit
+  ```
