@@ -12,11 +12,14 @@ The module uses a JSON file to persist streak data across bot restarts.
 import json
 import logging
 import os
+from typing import Dict
+
 import pytz
 
-from datetime import datetime, timedelta, time
+from datetime import datetime, timedelta, time, date
 from discord.ext import commands, tasks
 from discord import Member
+from discord.types.voice import VoiceState
 
 from bot import core
 from responses import get_hooter_explanation
@@ -125,43 +128,36 @@ class StreaksCog(commands.Cog):
     streaks_data = self.load_streaks()
     await self.display_streak(ctx, member, streaks_data)
 
-  async def display_streak(self, ctx, member, streaks_data):
+  async def process_streak(self, member: Member,
+                           before: VoiceState,
+                           after: VoiceState,
+                           study_channel_id: int,
+                           minimum_minutes: int) -> None:
     """
-    Display the streak information for a given member.
+    Process a user's streak based on their voice channel activity.
 
     Args:
-      ctx (commands.Context): The command context.
-      member (discord.Member): The member to display the streak for.
-      streaks_data (dict): The loaded streak data.
+      member (discord.Member): The member whose voice state changed.
+      before (discord.VoiceState): The previous voice state.
+      after (discord.VoiceState): The new voice state.
+      study_channel_id (int): The ID of the study channel.
+      minimum_minutes (int): The minimum minutes required for a valid study session.
     """
+    current_time = datetime.now()
     user_id = str(member.id)
-
-    if user_id in streaks_data:
-      current_streak = streaks_data[user_id]["current_streak"]
-      longest_streak = streaks_data[user_id]["longest_streak"]
-      username = streaks_data[user_id]["username"]
-      message = f"{username}'s streaks:\n" \
-                f"Current streak: {current_streak} days\n" \
-                f"Longest streak: {longest_streak} days"
-      await ctx.send(message)
-    else:
-      await ctx.send(f"{member.mention} hasn't started a streak yet.")
-
-  async def list_all_streaks(self, channel):
-    """
-    List all user streaks in the given channel.
-
-    Args:
-      channel (discord.TextChannel): The channel to send the streak list to.
-    """
     streaks_data = self.load_streaks()
-    streaks_message = "**Daily Streak Update:**\n"
-    for user_id, data in streaks_data.items():
-      username = data["username"]
-      current_streak = data["current_streak"]
-      streaks_message += f"{username}: {current_streak} days\n"
 
-    await channel.send(streaks_message)
+    if user_id not in streaks_data:
+      self.initialize_user_data(user_id, member.name)
+      self.save_streaks(streaks_data)
+
+    if self.is_joining_study_channel(after, study_channel_id):
+      logger.info(f"{user_id}, {member.name}, {current_time}")
+      self.handle_join(user_id, member.name, current_time)
+    elif self.is_leaving_study_channel(before, study_channel_id):
+      channel = before.channel
+      await self.handle_leave(user_id, member.name, minimum_minutes,
+                              member, channel, current_time)
 
   async def initialize_streaks(self):
     """Initialize streak data for all guild members."""
@@ -188,7 +184,7 @@ class StreaksCog(commands.Cog):
     self.save_streaks(streaks_data)
     logger.info("Streaks data initialization completed.")
 
-  def initialize_user_data(self, user_id, username):
+  def initialize_user_data(self, user_id: str, username: str) -> None:
     """
     Initialize streak data for a new user.
 
@@ -206,22 +202,22 @@ class StreaksCog(commands.Cog):
     }
     self.save_streaks(streaks_data)
 
-  def handle_join(self, user_id, username):
+  def handle_join(self, user_id: str, username: str, join_time: datetime) -> None:
     """
     Handle a user joining the study channel.
 
     Args:
       user_id (str): The user's ID.
       username (str): The user's name.
+      join_time (datetime): The time at which the user joined the voice channel
     """
     streaks_data = self.load_streaks()
-    join_time = datetime.now()
-    streaks_data[user_id]["join_time"] = join_time.isoformat()
+    streaks_data[user_id]["join_time"] = join_time
     logger.info(f"{username} joined the study channel.")
     self.save_streaks(streaks_data)
 
-  async def handle_leave(self, user_id, username, minimum_minutes, member,
-                         channel):
+  async def handle_leave(self, user_id: str, username: str, minimum_minutes: int, member: Member,
+                         channel, current_time: datetime):
     """
     Handle a user leaving the study channel.
 
@@ -231,92 +227,85 @@ class StreaksCog(commands.Cog):
       minimum_minutes (int): The minimum minutes required for a valid study session.
       member (discord.Member): The member who left the channel.
       channel (discord.TextChannel): The channel to send notifications to.
+      current_time (datetime): The time that the leave event occurs.
     """
     streaks_data = self.load_streaks()
     logger.info(f'Handling leave for {username}')
     user_join_time = streaks_data[user_id]["join_time"]
-    if user_join_time:
-      logger.info(f"{username} has join time.")
-      duration = datetime.now() - user_join_time
+
+    if user_join_time is None:
+      logger.info(f"{username} left the study channel but had no active join time.")
+    else:
+      logger.info(f"{username} has join time of {user_join_time}.")
+      duration = current_time - user_join_time
       if duration >= timedelta(minutes=minimum_minutes):
         previous_streak = streaks_data[user_id]["current_streak"]
-        streaks_data = self.update_streak(streaks_data, user_id,
-                                          username)
-        current_streak = streaks_data[user_id]["current_streak"]
-        if current_streak > previous_streak:
-          await channel.send(
-            f"Congratulations, {member.mention}! Your streak has increased to {current_streak} days.")
-        else:
-          await channel.send(
-            f"Great job, {member.mention}! You maintained your streak of {current_streak} days.")
+        self.update_streak(user_id, username, current_time)
+        await self.send_streak_notification(user_id, member, channel, previous_streak)
       else:
-        logger.info(
-          f"{username} left the study channel before the minimum duration.")
-        await channel.send(
-          f"Hey {member.mention}, you left the study channel before the minimum {minimum_minutes} minutes. Keep at it next time to maintain your streak!")
-    else:
-      logger.info(
-        f"{username} left the study channel but had no active join time.")
+        logger.info(f"{username} left the study channel before the minimum duration.")
+        await channel.send(f"Hey {member.mention}, you left the study channel before the minimum "
+                           f"{minimum_minutes} minutes. Keep at it next time to maintain your streak!")
 
+    streaks_data = self.load_streaks()
     streaks_data[user_id]["join_time"] = None
     self.save_streaks(streaks_data)
 
-  def update_streak(self, streaks_data, user_id, username):
+  async def send_streak_notification(self, user_id, member, channel, previous_streak):
+    streaks_data = self.load_streaks()
+    current_streak = streaks_data[user_id]["current_streak"]
+
+    if current_streak > previous_streak:
+      await channel.send(
+        f"Congratulations, {member.mention}! Your streak has increased to {current_streak} days.")
+    else:
+      await channel.send(
+        f"Great job, {member.mention}! You maintained your streak of {current_streak} days.")
+
+  def update_streak(self, user_id, username, current_time: datetime):
     """
     Update a user's streak based on their study activity.
 
     Args:
-      streaks_data (dict): The current streak data.
       user_id (str): The user's ID.
       username (str): The user's name.
+      current_time (datetime): The time at which the streak is being updated.
 
     Returns:
       dict: The updated streak data.
     """
-    today = datetime.now().date()
-    last_join_date_str = streaks_data[user_id]["last_join_date"]
+    streaks_data = self.load_streaks()
+    user_data = streaks_data[user_id]
+    today = current_time.date()
+    last_join_date = streaks_data[user_id]["last_join_date"]
 
-    if last_join_date_str:
-      last_join_date = self.parse_date_string(last_join_date_str)
-      days_since_last_join = (today - last_join_date).days
-
-      if days_since_last_join == 1:
-        streaks_data = self.increment_streak(streaks_data, user_id,
-                                             username)
-      elif days_since_last_join > 1:
-        streaks_data = self.reset_streak(streaks_data, user_id,
-                                         username)
+    if last_join_date is None:
+      user_data = self.start_new_streak(user_data)
+    elif (today - last_join_date).days == 1:
+      user_data = self.increment_streak(user_data)
+    elif (today - last_join_date).days > 1:
+      user_data = self.reset_streak(user_data)
     else:
-      streaks_data = self.start_new_streak(streaks_data, user_id,
-                                           username)
+      logger.error("Unexpected behavior has occurred when updating streak.")
 
-    streaks_data[user_id]["last_join_date"] = today.isoformat()
-    return streaks_data
+    user_data["last_join_date"] = today
+    self.save_streaks(streaks_data)
 
-  async def process_streak(self, member, before, after, study_channel_id,
-                           minimum_minutes):
+  async def list_all_streaks(self, channel):
     """
-    Process a user's streak based on their voice channel activity.
+    List all user streaks in the given channel.
 
     Args:
-      member (discord.Member): The member whose voice state changed.
-      before (discord.VoiceState): The previous voice state.
-      after (discord.VoiceState): The new voice state.
-      study_channel_id (int): The ID of the study channel.
-      minimum_minutes (int): The minimum minutes required for a valid study session.
+      channel (discord.TextChannel): The channel to send the streak list to.
     """
-    user_id = str(member.id)
     streaks_data = self.load_streaks()
+    streaks_message = "**Daily Streak Update:**\n"
+    for user_id, data in streaks_data.items():
+      username = data["username"]
+      current_streak = data["current_streak"]
+      streaks_message += f"{username}: {current_streak} days\n"
 
-    if user_id not in streaks_data:
-      self.initialize_user_data(user_id, member.name)
-
-    if self.is_joining_study_channel(after, study_channel_id):
-      self.handle_join(user_id, member.name)
-    elif self.is_leaving_study_channel(before, study_channel_id):
-      channel = before.channel
-      await self.handle_leave(user_id, member.name, minimum_minutes,
-                              member, channel)
+    await channel.send(streaks_message)
 
   @staticmethod
   def load_streaks():
@@ -333,16 +322,16 @@ class StreaksCog(commands.Cog):
         json.dump({}, file)
     else:
       logger.info(f"Loading streaks data from file: {STREAKS_FILE}")
+
     with open(STREAKS_FILE, 'r') as file:
       loaded_data = json.load(file)
-      logger.debug(f"Raw loaded data: {loaded_data}")
       deserialized_streaks = {
         user_id: {
           "username": data["username"],
           "current_streak": data["current_streak"],
           "longest_streak": data["longest_streak"],
-          "last_join_date": datetime.fromisoformat(data["last_join_date"]) if
-          data["last_join_date"] else None,
+          "last_join_date": datetime.fromisoformat(
+            data["last_join_date"]).date() if data["last_join_date"] else None,
           "join_time": datetime.fromisoformat(data["join_time"]) if data[
             "join_time"] else None
         }
@@ -366,9 +355,9 @@ class StreaksCog(commands.Cog):
         "current_streak": data["current_streak"],
         "longest_streak": data["longest_streak"],
         "last_join_date": data["last_join_date"].isoformat() if isinstance(
-          data["last_join_date"], datetime) else data["last_join_date"],
+          data["last_join_date"], date) else None,
         "join_time": data["join_time"].isoformat() if isinstance(
-          data["join_time"], datetime) else data["join_time"]
+          data["join_time"], datetime) else None
       }
       for user_id, data in streaks_data.items()
     }
@@ -405,70 +394,74 @@ class StreaksCog(commands.Cog):
     return before.channel and before.channel.id == study_channel_id
 
   @staticmethod
-  def parse_date_string(date_string):
-    """
-    Parse a date string into a date object.
-
-    Args:
-      date_string (str or datetime.datetime): The date string to parse.
-
-    Returns:
-      datetime.date: The parsed date.
-    """
-    if isinstance(date_string, str):
-      return datetime.fromisoformat(date_string).date()
-    else:
-      return date_string.date()
-
-  @staticmethod
-  def increment_streak(streaks_data, user_id, username):
+  def increment_streak(user_data: Dict):
     """
     Increment a user's streak.
 
     Args:
-      streaks_data (dict): The current streak data.
-      user_id (str): The user's ID.
-      username (str): The user's name.
+      user_data (Dict):
 
     Returns:
-      dict: The updated streak data.
+      dict: The user's data for streaks.
     """
-    streaks_data[user_id]["current_streak"] += 1
-    streaks_data[user_id]["longest_streak"] = max(
-      streaks_data[user_id]["longest_streak"],
-      streaks_data[user_id]["current_streak"])
+    user_data["current_streak"] += 1
+    user_data["longest_streak"] = max(
+      user_data["longest_streak"],
+      user_data["current_streak"])
     logger.info(
-      f"{username}'s streak increased to {streaks_data[user_id]['current_streak']} days.")
-    return streaks_data
+      f"{user_data['username']}'s streak increased to {user_data['current_streak']} days.")
+    return user_data
 
   @staticmethod
-  def reset_streak(streaks_data, user_id, username):
+  def reset_streak(user_data):
     """
     Reset a user's streak to 1.
 
     Args:
-      streaks_data (dict): The current streak data.
-      user_id (str): The user's ID.
-      username (str): The user's name.
+      user_data (Dict):
 
     Returns:
-      dict: The updated streak data.
+      dict: The user's data for streaks.
     """
-    streaks_data[user_id]["current_streak"] = 1
-    logger.info(f"{username}'s streak reset to 1 day.")
-    return streaks_data
+    user_data["current_streak"] = 1
+    logger.info(f"{user_data['username']}'s streak reset to 1 day.")
+    return user_data
 
   @staticmethod
-  def start_new_streak(streaks_data, user_id, username):
+  def start_new_streak(user_data):
     """
     Start a new streak for a user.
 
     Args:
-      streaks_data (dict): The current streak data.
-      user_id (str): The user's ID.
-      username (str): The user
+      user_data (Dict):
+
+    Returns:
+      dict: The user's data for streaks.
     """
-    streaks_data[user_id]["current_streak"] = 1
-    streaks_data[user_id]["longest_streak"] = 1
-    logger.info(f"{username} started a new streak of 1 day.")
-    return streaks_data
+    user_data["current_streak"] = 1
+    user_data["longest_streak"] = 1
+    logger.info(f"{user_data['username']} started a new streak of 1 day.")
+    return user_data
+
+  @staticmethod
+  async def display_streak(ctx, member, streaks_data):
+    """
+    Display the streak information for a given member.
+
+    Args:
+      ctx (commands.Context): The command context.
+      member (discord.Member): The member to display the streak for.
+      streaks_data (dict): The loaded streak data.
+    """
+    user_id = str(member.id)
+
+    if user_id in streaks_data:
+      current_streak = streaks_data[user_id]["current_streak"]
+      longest_streak = streaks_data[user_id]["longest_streak"]
+      username = streaks_data[user_id]["username"]
+      message = f"{username}'s streaks:\n" \
+                f"Current streak: {current_streak} days\n" \
+                f"Longest streak: {longest_streak} days"
+      await ctx.send(message)
+    else:
+      await ctx.send(f"{member.mention} hasn't started a streak yet.")
