@@ -12,9 +12,10 @@ The module uses a JSON file to persist streak data across bot restarts.
 import json
 import logging
 import os
-from typing import Dict
+import shutil
 
 import pytz
+import tempfile
 
 from datetime import datetime, timedelta, time, date
 from discord.ext import commands, tasks
@@ -23,6 +24,8 @@ from discord.types.voice import VoiceState
 
 from bot import core
 from responses import get_hooter_explanation
+from typing import Dict
+
 
 logger = logging.getLogger(__name__)
 
@@ -348,7 +351,7 @@ class StreaksCog(commands.Cog):
       return {}
 
   @staticmethod
-  def save_streaks(streaks_data):
+  def save_streaks(streaks_data) -> bool:
     """
     Save streak data to the JSON file.
 
@@ -368,9 +371,24 @@ class StreaksCog(commands.Cog):
       }
       for user_id, data in streaks_data.items()
     }
-    with open(STREAKS_FILE, 'w') as file:
-      json.dump(serialized_data, file, indent=4)
-    logger.info("Streaks data saved successfully.")
+    temp_file = tempfile.NamedTemporaryFile(mode='w', delete=False)
+    try:
+      json.dump(serialized_data, temp_file, indent=4)
+      temp_file.flush()
+      os.fsync(temp_file.fileno())
+      temp_file.close()
+      shutil.move(temp_file.name, STREAKS_FILE)
+      logger.info("Streaks data saved successfully.")
+    except Exception as e:
+      logger.error(f"Failed to save streaks data: {str(e)}")
+      os.unlink(temp_file.name)
+
+    # Validate the save operation
+    loaded_data = StreaksCog.load_streaks()
+    if loaded_data != streaks_data:
+      logger.error("Validation failed: Saved data does not match original data.")
+      return False
+    return True
 
   @staticmethod
   def is_joining_study_channel(after, study_channel_id):
