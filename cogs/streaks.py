@@ -323,22 +323,29 @@ class StreaksCog(commands.Cog):
     else:
       logger.info(f"Loading streaks data from file: {STREAKS_FILE}")
 
-    with open(STREAKS_FILE, 'r') as file:
-      loaded_data = json.load(file)
-      deserialized_streaks = {
-        user_id: {
-          "username": data["username"],
-          "current_streak": data["current_streak"],
-          "longest_streak": data["longest_streak"],
-          "last_join_date": datetime.fromisoformat(
-            data["last_join_date"]).date() if data["last_join_date"] else None,
-          "join_time": datetime.fromisoformat(data["join_time"]) if data[
-            "join_time"] else None
+    try:
+      with open(STREAKS_FILE, 'r') as file:
+        loaded_data = json.load(file)
+        deserialized_streaks = {
+          user_id: {
+            "username": data["username"],
+            "current_streak": data["current_streak"],
+            "longest_streak": data["longest_streak"],
+            "last_join_date": datetime.fromisoformat(
+              data["last_join_date"]).date() if data["last_join_date"] else None,
+            "join_time": datetime.fromisoformat(data["join_time"]) if data[
+              "join_time"] else None
+          }
+          for user_id, data in loaded_data.items()
         }
-        for user_id, data in loaded_data.items()
-      }
-      logger.debug(f"Deserialized streaks: {deserialized_streaks}")
-      return deserialized_streaks
+        logger.debug(f"Deserialized streaks: {deserialized_streaks}")
+        return deserialized_streaks
+    except json.JSONDecodeError:
+      logger.error(f"Failed to parse JSON from {STREAKS_FILE}. File may be corrupted.")
+      return {}
+    except Exception as e:
+      logger.error(f"An error occurred while loading streaks: {str(e)}")
+      return {}
 
   @staticmethod
   def save_streaks(streaks_data):
