@@ -216,8 +216,11 @@ class StreaksCog(commands.Cog):
     """
     streaks_data = self.load_streaks()
     streaks_data[user_id]["join_time"] = join_time
-    logger.info(f"{username} joined the study channel.")
-    self.save_streaks(streaks_data)
+    logger.info(f"{username} joined the study channel at {join_time}.")
+    if self.save_streaks(streaks_data):
+      logger.info(f"Successfully updated join time for {username} at {join_time}")
+    else:
+      logger.error(f"Failed to update join time for {username}")
 
   async def handle_leave(self, user_id: str, username: str, minimum_minutes: int, member: Member,
                          channel, current_time: datetime):
@@ -233,26 +236,34 @@ class StreaksCog(commands.Cog):
       current_time (datetime): The time that the leave event occurs.
     """
     streaks_data = self.load_streaks()
-    logger.info(f'Handling leave for {username}')
+    logger.info(f'Handling leave for {username} at {current_time}')
     user_join_time = streaks_data[user_id]["join_time"]
 
     if user_join_time is None:
-      logger.info(f"{username} left the study channel but had no active join time.")
+      logger.warning(f"{username} left the study channel but had no active join time.")
     else:
-      logger.info(f"{username} has join time of {user_join_time}.")
+      logger.info(
+        f"{username} joined at {user_join_time} and left at {current_time}.")
       duration = current_time - user_join_time
       if duration >= timedelta(minutes=minimum_minutes):
         previous_streak = streaks_data[user_id]["current_streak"]
-        self.update_streak(user_id, username, current_time)
-        await self.send_streak_notification(user_id, member, channel, previous_streak)
+        updated = self.update_streak(user_id, username, current_time)
+        if updated:
+          await self.send_streak_notification(user_id, member, channel, previous_streak)
+        else:
+          logger.error(f"Failed to update streak for {username}")
       else:
-        logger.info(f"{username} left the study channel before the minimum duration.")
-        await channel.send(f"Hey {member.mention}, you left the study channel before the minimum "
-                           f"{minimum_minutes} minutes. Keep at it next time to maintain your streak!")
+        logger.info(f"{username} left the study channel after {duration.total_seconds() / 60:.2f} minutes, before the minimum duration.")
+        await channel.send(
+          f"Hey {member.mention}, you left the study channel before the minimum "
+          f"{minimum_minutes} minutes. Keep at it next time to maintain your streak!")
 
     streaks_data = self.load_streaks()
     streaks_data[user_id]["join_time"] = None
-    self.save_streaks(streaks_data)
+    if self.save_streaks(streaks_data):
+      logger.info(f"Successfully reset join time for {username}")
+    else:
+      logger.error(f"Failed to reset join time for {username}")
 
   async def send_streak_notification(self, user_id, member, channel, previous_streak):
     streaks_data = self.load_streaks()
@@ -280,7 +291,9 @@ class StreaksCog(commands.Cog):
     streaks_data = self.load_streaks()
     user_data = streaks_data[user_id]
     today = current_time.date()
-    last_join_date = streaks_data[user_id]["last_join_date"]
+    last_join_date = user_data["last_join_date"]
+
+    logger.info(f"Updating streak for {username}. Current date: {today}, Last join date: {last_join_date}")
 
     if last_join_date is None:
       user_data = self.start_new_streak(user_data)
@@ -289,10 +302,12 @@ class StreaksCog(commands.Cog):
     elif (today - last_join_date).days > 1:
       user_data = self.reset_streak(user_data)
     else:
-      logger.error("Unexpected behavior has occurred when updating streak.")
+      logger.warning(f"Unexpected behavior: {username}'s last join date ({last_join_date}) is not before today ({today}).")
+      return False
 
     user_data["last_join_date"] = today
-    self.save_streaks(streaks_data)
+    streaks_data[user_id] = user_data
+    return self.save_streaks(streaks_data)
 
   async def list_all_streaks(self, channel):
     """
