@@ -3,6 +3,7 @@ from dotenv import load_dotenv
 from discord.ext import commands
 from discord import Intents
 
+
 load_dotenv()
 TOKEN = os.getenv("DISCORD_TOKEN")
 STUDY_CHANNEL_ID = 1236433017250250806
