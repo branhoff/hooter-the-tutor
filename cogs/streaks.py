@@ -276,7 +276,7 @@ class StreaksCog(commands.Cog):
       await channel.send(
         f"Great job, {member.mention}! You maintained your streak of {current_streak} days.")
 
-  def update_streak(self, user_id, username, current_time: datetime):
+  def update_streak(self, user_id, username, current_time: datetime) -> bool:
     """
     Update a user's streak based on their study activity.
 
@@ -286,7 +286,7 @@ class StreaksCog(commands.Cog):
       current_time (datetime): The time at which the streak is being updated.
 
     Returns:
-      dict: The updated streak data.
+      bool: True if the streak was updated or already updated today, False if an error occurred.
     """
     streaks_data = self.load_streaks()
     user_data = streaks_data[user_id]
@@ -299,6 +299,9 @@ class StreaksCog(commands.Cog):
       user_data = self.start_new_streak(user_data)
     elif (today - last_join_date).days == 1:
       user_data = self.increment_streak(user_data)
+    elif (today - last_join_date).days == 0:
+      logger.info(f"{username} has already successfully incremented today. Skipping today")
+      return True
     elif (today - last_join_date).days > 1:
       user_data = self.reset_streak(user_data)
     else:
