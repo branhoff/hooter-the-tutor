@@ -292,3 +292,58 @@ async def test_reset_streak_after_two_days(cog):
     assert saved_data[user_id]["longest_streak"] == 10
     assert saved_data[user_id]["last_join_date"] == leave_time.date()
     assert saved_data[user_id]["join_time"] is None
+
+@pytest.mark.asyncio
+async def test_multiple_joins_in_one_day(cog):
+  # Arrange
+  user_id = "12345"
+  username = "TestUser"
+
+  # Mock initial streak data
+  initial_streak_data = {
+    user_id: {
+      "username": username,
+      "current_streak": 1,
+      "longest_streak": 1,
+      "last_join_date": (datetime.now() - timedelta(days=1)).date(),
+      "join_time": None
+    }
+  }
+
+  # Mock member and channel
+  member = AsyncMock(spec=Member)
+  member.id = user_id
+  member.name = username
+  channel = AsyncMock()
+
+  with patch.object(cog, 'load_streaks', return_value=initial_streak_data), \
+      patch.object(cog, 'save_streaks') as mock_save, \
+      patch('cogs.streaks.datetime') as mock_datetime:
+    # Simulate first join-leave cycle
+    join_time1 = datetime.now()
+    mock_datetime.now.return_value = join_time1
+    cog.handle_join(user_id, username, join_time1)
+
+    leave_time1 = join_time1 + timedelta(minutes=30)
+    mock_datetime.now.return_value = leave_time1
+    await cog.handle_leave(user_id, username, core.MINIMUM_MINUTES, member,
+                           channel, leave_time1)
+
+    # Simulate second join-leave cycle on the same day
+    join_time2 = leave_time1 + timedelta(hours=2)
+    mock_datetime.now.return_value = join_time2
+    cog.handle_join(user_id, username, join_time2)
+
+    leave_time2 = join_time2 + timedelta(minutes=30)
+    mock_datetime.now.return_value = leave_time2
+    await cog.handle_leave(user_id, username, core.MINIMUM_MINUTES, member,
+                           channel, leave_time2)
+
+    # Assert
+    mock_save.assert_called()
+    saved_data = mock_save.call_args[0][0]
+    assert saved_data[user_id][
+             "current_streak"] == 2  # Streak should only increment once
+    assert saved_data[user_id]["longest_streak"] == 2
+    assert saved_data[user_id]["last_join_date"] == leave_time2.date()
+    assert saved_data[user_id]["join_time"] is None
