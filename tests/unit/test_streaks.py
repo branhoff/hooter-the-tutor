@@ -93,8 +93,7 @@ async def test_on_voice_state_update_non_bot(cog):
   await cog.on_voice_state_update(member, before, after)
 
   # Assert
-  cog.handle_study_channel_activity.assert_called_once_with(member, before,
-                                                            after)
+  cog.handle_study_channel_activity.assert_called_once_with(member, before, after)
 
 
 @pytest.mark.asyncio
