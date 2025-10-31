@@ -1,7 +1,7 @@
 from dotenv import load_dotenv
 import os
 from langchain_community.llms.octoai_endpoint import OctoAIEndpoint
-from langchain.prompts import ChatPromptTemplate
+from langchain_core.prompts import ChatPromptTemplate
 from langchain_core.output_parsers import StrOutputParser
 from responses import get_hooter_explanation
 
