@@ -53,4 +53,5 @@ jobs:
             --image=${{ env.ARTIFACT_REGISTRY }}/${{ env.PROJECT_ID }}/${{ env.REPOSITORY }}/${{ env.SERVICE_NAME }}:latest \
             --region=${{ env.REGION }} \
             --platform=managed \
-            --allow-unauthenticated
+            --allow-unauthenticated \
+            --set-env-vars="DISCORD_TOKEN=${{ secrets.DISCORD_TOKEN }},OPENAI_API_KEY=${{ secrets.OPENAI_API_KEY }},OCTOAI_API_TOKEN=${{ secrets.OCTOAI_API_TOKEN }}"
