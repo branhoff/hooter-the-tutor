@@ -31,6 +31,8 @@ logger = logging.getLogger(__name__)
 
 STREAKS_FILE = "streaks.json"
 
+PST = pytz.timezone('US/Pacific')
+
 
 class StreaksCog(commands.Cog):
   """
@@ -55,7 +57,7 @@ class StreaksCog(commands.Cog):
     """Cancel the daily streak update task when the cog is unloaded."""
     self.daily_streak_update.cancel()
 
-  @tasks.loop(time=time(hour=21, minute=0, tzinfo=pytz.timezone('US/Pacific')))
+  @tasks.loop(time=time(hour=21, minute=0, tzinfo=pytz.timezone(PST)))
   async def daily_streak_update(self):
     """
     Perform a daily update of all user streaks.
@@ -146,7 +148,7 @@ class StreaksCog(commands.Cog):
       study_channel_id (int): The ID of the study channel.
       minimum_minutes (int): The minimum minutes required for a valid study session.
     """
-    current_time = datetime.now()
+    current_time = datetime.now(PST)
     user_id = str(member.id)
     streaks_data = self.load_streaks()
 
