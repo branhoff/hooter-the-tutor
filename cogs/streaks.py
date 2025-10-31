@@ -57,7 +57,7 @@ class StreaksCog(commands.Cog):
     """Cancel the daily streak update task when the cog is unloaded."""
     self.daily_streak_update.cancel()
 
-  @tasks.loop(time=time(hour=21, minute=0, tzinfo=pytz.timezone(PST)))
+  @tasks.loop(time=time(hour=21, minute=0, tzinfo=PST))
   async def daily_streak_update(self):
     """
     Perform a daily update of all user streaks.
