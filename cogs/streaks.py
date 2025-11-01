@@ -110,8 +110,10 @@ class StreaksCog(commands.Cog):
       member (discord.Member, optional): The member to reintroduce the system to.
     """
     if member:
+      logger.info("Is a member: ", member)
       message = f"Hey {member.display_name}, let me reintroduce you to how we keep things engaging around here!"
     else:
+      logger.info("Is not a member: ", member)
       message = "Looks like someone needs a refresher on how our awesome system works!"
 
     explanation = get_hooter_explanation()
@@ -129,6 +131,9 @@ class StreaksCog(commands.Cog):
     """
     if member is None:
       member = ctx.author
+
+    # check if member is valid
+    # else not valid, handle error, "HOOOO is that?"
 
     streaks_data = self.load_streaks()
     await self.display_streak(ctx, member, streaks_data)
@@ -148,19 +153,25 @@ class StreaksCog(commands.Cog):
       study_channel_id (int): The ID of the study channel.
       minimum_minutes (int): The minimum minutes required for a valid study session.
     """
+    logger.info("### Begin processing streak ###")
     current_time = datetime.now(PST)
     user_id = str(member.id)
     streaks_data = self.load_streaks()
+
 
     if user_id not in streaks_data:
       self.initialize_user_data(user_id, member.name)
       self.save_streaks(streaks_data)
 
     if self.is_joining_study_channel(after, study_channel_id):
-      logger.info(f"{user_id}, {member.name}, {current_time}")
+      logger.info(f"Is joining study channel; user_id: {user_id}, member.name: {member.name}, current_time: {current_time}")
+      logger.info("## Handling Join ##")
       self.handle_join(user_id, member.name, current_time)
     elif self.is_leaving_study_channel(before, study_channel_id):
+      logger.info(f"Is leaving study channel; user_id: {user_id}, member.name: {member.name}, current_time: {current_time}")
       channel = before.channel
+
+      logger.info("## Handling Leave ##")
       await self.handle_leave(user_id, member.name, minimum_minutes,
                               member, channel, current_time)
 
@@ -188,6 +199,8 @@ class StreaksCog(commands.Cog):
 
     self.save_streaks(streaks_data)
     logger.info("Streaks data initialization completed.")
+    logger.info("### Finishing processing streak ###")
+
 
   def initialize_user_data(self, user_id: str, username: str) -> None:
     """
@@ -217,13 +230,17 @@ class StreaksCog(commands.Cog):
       join_time (datetime): The time at which the user joined the voice channel
     """
     streaks_data = self.load_streaks()
+    logger.info(f"this is {username}'s streaks_data: {streaks_data[user_id]}")
     streaks_data[user_id]["join_time"] = join_time
     logger.info(f"{username} joined the study channel at {join_time}.")
     if self.save_streaks(streaks_data):
       logger.info(f"Successfully updated join time for {username} at {join_time}")
+      logger.info(f"this is {username}'s streaks_data that was saved: {self.load_streaks()[user_id]}")
+
     else:
       logger.error(f"Failed to update join time for {username}")
-
+      logger.info(f"this is {username}'s streaks_data that was saved: {self.load_streaks()[user_id]}")
+  
   async def handle_leave(self, user_id: str, username: str, minimum_minutes: int, member: Member,
                          channel, current_time: datetime):
     """
@@ -238,22 +255,27 @@ class StreaksCog(commands.Cog):
       current_time (datetime): The time that the leave event occurs.
     """
     streaks_data = self.load_streaks()
+    logger.info(f"this is {username}'s session data that was recorded upon leaving the call: {streaks_data[user_id]}")
+    logger.info(f"this is the previous join time for {username}: {streaks_data[user_id]['join_time']}")
     logger.info(f'Handling leave for {username} at {current_time}')
     user_join_time = streaks_data[user_id]["join_time"]
 
     if user_join_time is None:
-      logger.warning(f"{username} left the study channel but had no active join time.")
+      logger.warning(f"{username} left the study channel but no active join time was recorded.") # could have more detail
     else:
       logger.info(
         f"{username} joined at {user_join_time} and left at {current_time}.")
       duration = current_time - user_join_time
+      logger.info(f"the duration of {username}'s call was: {duration}")
       if duration >= timedelta(minutes=minimum_minutes):
         previous_streak = streaks_data[user_id]["current_streak"]
-        updated = self.update_streak(user_id, username, current_time)
-        if updated:
+        is_updated = self.update_streak(user_id, username, current_time)
+
+        if is_updated:
           await self.send_streak_notification(user_id, member, channel, previous_streak)
         else:
           logger.error(f"Failed to update streak for {username}")
+          logger.info(f"{username}'s current streak data: {streaks_data[user_id]}")
       else:
         logger.info(f"{username} left the study channel after {duration.total_seconds() / 60:.2f} minutes, before the minimum duration.")
         await channel.send(
