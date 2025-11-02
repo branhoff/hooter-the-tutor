@@ -64,7 +64,7 @@ This structure allows for modular development and easy expansion of the bot's fu
 
 ## Running Unit Tests
 
-This project uses pytest for unit testing. To run the unit tests, follow these steps:
+This project uses pytest for unit testing. To run the unit tests, follow these steps:  
 
 1. Navigate to the root directory of the project in your terminal.
 2. Make sure you've run the `./scripts/install_dependencies.sh` script which will install testing requirements from `requirements/dev.text`:
