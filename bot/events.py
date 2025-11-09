@@ -43,7 +43,8 @@ async def on_disconnect() -> None:
 
 @bot.event
 async def on_message(message: Message) -> None:
-  if message.author == bot.user:
+  #Exit function if Hooter is sending message or if everyone is mentioned
+  if message.author == bot.user or message.mention_everyone:
     return
 
   username: str = str(message.author)
@@ -51,6 +52,7 @@ async def on_message(message: Message) -> None:
   channel: str = str(message.channel)
 
   logger.info(f"[{channel}] {username}: {user_message}")
+  logger.info(f"the last message was: {message}")
 
   if bot.user.mentioned_in(message):
     user_message = user_message.replace(f'<@!{bot.user.id}>', '').strip()
