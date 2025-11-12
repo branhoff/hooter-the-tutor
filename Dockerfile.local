@@ -1,0 +1,19 @@
+# Extend from the actual production image
+FROM hooter-the-tutor:prod
+
+# Install development tools
+RUN apt-get update && apt-get install -y \
+    git \
+    vim \
+    curl \
+    htop \
+    iputils-ping \
+    net-tools \
+    tree \
+    && rm -rf /var/lib/apt/lists/*
+
+# Install development requirements
+COPY requires/dev.txt ./requires/
+RUN pip install --no-cache-dir -r requires/dev.txt
+
+CMD ["/bin/bash"]
